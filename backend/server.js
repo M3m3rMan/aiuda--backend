@@ -9,10 +9,10 @@ import path from 'path';
 import { OpenAI } from 'openai';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import pdfParse from 'pdf-parse';
 import net from 'net';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 import { franc } from 'franc';
 import bcrypt from 'bcrypt';
 
