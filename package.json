@@ -27,7 +27,6 @@
     "franc": "^6.2.0",
     "mongodb": "^6.16.0",
     "mongoose": "^8.15.0",
-    "onnxruntime-node": "^1.22.0",
     "openai": "^4.102.0",
     "pdf-parse": "^1.0.1",
     "protobufjs": "^7.4.0"
