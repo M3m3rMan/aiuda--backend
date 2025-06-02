@@ -221,9 +221,18 @@ async function translateText(text, targetLanguage) {
 // --- TCP SERVER SETUP ---
 const tcpServer = net.createServer((socket) => {
   socket.on('data', async (data) => {
-    console.log('Received:', data.toString());
+    const str = data.toString();
+    console.log('Received:', str);
+    let parsed;
     try {
-      const { text, userId, targetLanguage } = JSON.parse(data.toString());
+      parsed = JSON.parse(str);
+    } catch (error) {
+      // Not valid JSON, likely a health check or HTTP probe, just ignore
+      console.warn('Non-JSON data received on TCP socket, ignoring.');
+      return;
+    }
+    try {
+      const { text, userId, targetLanguage } = parsed;
       console.log('Calling getRagAnswer...');
       const { answer, translated } = await getRagAnswer(text, targetLanguage, userId, 'tcp');
       console.log('Got answer:', answer);
