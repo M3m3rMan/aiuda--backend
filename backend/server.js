@@ -163,61 +163,6 @@ Current time: {time}`,
   }
 }
 
-// Dummy chatbot response function (keeping original for TCP compatibility)
-async function generateChatbotResponse(text, userId) {
-  // Ensure PDF chunks are initialized
-  const chunkCount = await DocumentChunk.countDocuments();
-  if (chunkCount === 0) {
-    await initializeDatabase();
-  }
-
-  // Find relevant chunks
-  const chunks = await DocumentChunk.find({});
-  if (chunks.length === 0) {
-    return "No PDF documents found. Please ensure PDFs are in the correct directory.";
-  }
-  const chunkEmbeddings = chunks.map(c => c.embedding);
-  const questionEmbedding = await getEmbedding(text);
-
-  const similarities = chunkEmbeddings.map(e => cosineSimilarity(e, questionEmbedding));
-  const topIndices = similarities
-    .map((sim, idx) => ({ sim, idx }))
-    .sort((a, b) => b.sim - a.sim)
-    .slice(0, 3)
-    .map(obj => obj.idx);
-
-  const ragContext = topIndices.map(idx =>
-    `From ${chunks[idx].filename}:\n${chunks[idx].content}`
-  ).join('\n\n---\n\n');
-
-  const context = ragContext ? `Relevant LAUSD documents:\n\n${ragContext}` : '';
-
-  if (!context) {
-    return "Sorry, I couldn't find relevant information in the LAUSD documents.";
-  }
-
-  // Ask OpenAI
-  const response = await makeOpenAIRequest({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'You are a helpful assistant who answers questions using official LAUSD documents and be very specific about the answer, .' },
-      { role: 'user', content: `${context}\n\nQuestion: ${text}` }
-    ],
-    temperature: 0.3
-  });
-
-  return response.data.choices?.[0]?.message?.content || 'No answer generated.';
-}
-
-// Dummy translation function
-async function translateText(text, targetLanguage) {
-  // Replace this with your actual translation logic if needed
-  if (targetLanguage === 'es') {
-    return `Traducción simulada: ${text}`;
-  }
-  return text;
-}
-
 // --- TCP SERVER SETUP ---
 const tcpServer = net.createServer((socket) => {
   socket.on('data', async (data) => {
@@ -277,7 +222,9 @@ testTcpServer.listen(4000, () => {
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useUnifiedTopology: true
+  // ssl: true, // optional, Atlas uses SSL by default
+  // tlsAllowInvalidCertificates: true, // REMOVED for production
 });
 mongoose.connection.on('connected', () => {
   console.log('MongoDB connected');
@@ -330,6 +277,62 @@ userSchema.pre('save', async function(next) {
 });
 
 const User = mongoose.model('User', userSchema);
+
+// --- EMBEDDING AND CHUNKING LOGIC (from server.js, keep as is for Render) ---
+// Dummy chatbot response function (keeping original for TCP compatibility)
+async function generateChatbotResponse(text, userId) {
+  // Ensure PDF chunks are initialized
+  const chunkCount = await DocumentChunk.countDocuments();
+  if (chunkCount === 0) {
+    await initializeDatabase();
+  }
+
+  // Find relevant chunks
+  const chunks = await DocumentChunk.find({});
+  if (chunks.length === 0) {
+    return "No PDF documents found. Please ensure PDFs are in the correct directory.";
+  }
+  const chunkEmbeddings = chunks.map(c => c.embedding);
+  const questionEmbedding = await getEmbedding(text);
+
+  const similarities = chunkEmbeddings.map(e => cosineSimilarity(e, questionEmbedding));
+  const topIndices = similarities
+    .map((sim, idx) => ({ sim, idx }))
+    .sort((a, b) => b.sim - a.sim)
+    .slice(0, 3)
+    .map(obj => obj.idx);
+
+  const ragContext = topIndices.map(idx =>
+    `From ${chunks[idx].filename}:\n${chunks[idx].content}`
+  ).join('\n\n---\n\n');
+
+  const context = ragContext ? `Relevant LAUSD documents:\n\n${ragContext}` : '';
+
+  if (!context) {
+    return "Sorry, I couldn't find relevant information in the LAUSD documents.";
+  }
+
+  // Ask OpenAI
+  const response = await makeOpenAIRequest({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant who answers questions using official LAUSD documents and be very specific about the answer, .' },
+      { role: 'user', content: `${context}\n\nQuestion: ${text}` }
+    ],
+    temperature: 0.3
+  });
+
+  return response.data.choices?.[0]?.message?.content || 'No answer generated.';
+}
+
+// Dummy translation function
+async function translateText(text, targetLanguage) {
+  // Replace this with your actual translation logic if needed
+  if (targetLanguage === 'es') {
+    return `Traducción simulada: ${text}`;
+  }
+  return text;
+}
 
 // Utility: Chunk text
 function chunkText(text, size = 1000) {
