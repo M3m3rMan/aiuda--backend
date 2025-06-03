@@ -288,7 +288,7 @@ async function generateChatbotResponse(text, userId) {
   }
 
   // Find relevant chunks
-  const chunks = await DocumentChunk.find({});
+  const chunks = await DocumentChunk.find({}).limit(100); // Limit to reduce memory usage
   if (chunks.length === 0) {
     return "No PDF documents found. Please ensure PDFs are in the correct directory.";
   }
@@ -735,7 +735,7 @@ async function getRagAnswer(question, language = 'en', userId = null, source = '
     console.log('Database initialized');
   }
 
-  const chunks = await DocumentChunk.find({});
+  const chunks = await DocumentChunk.find({}).limit(100); // Limit to reduce memory usage
   console.log('Chunks found:', chunks.length);
 
   if (chunks.length === 0) {
