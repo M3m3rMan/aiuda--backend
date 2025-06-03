@@ -736,7 +736,7 @@ async function getRagAnswer(question, language = 'en', userId = null, source = '
   }
 
   // Limit the number of chunks loaded to reduce memory usage
-  const chunks = await DocumentChunk.find({}).limit(50); // Adjust limit as needed
+  const chunks = await DocumentChunk.find({}).limit(10); // Adjust limit as needed
   console.log('Chunks found:', chunks.length);
 
   if (chunks.length === 0) {
