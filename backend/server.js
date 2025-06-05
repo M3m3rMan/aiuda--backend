@@ -278,6 +278,17 @@ userSchema.pre('save', async function(next) {
 
 const User = mongoose.model('User', userSchema);
 
+// Analytics schema for logging every /api/ask Q&A
+const analyticsSchema = new mongoose.Schema({
+  question: String,
+  answer: String,
+  language: String,
+  source: String,
+  threadId: String,
+  timestamp: { type: Date, default: Date.now }
+});
+const AnalyticsConversation = mongoose.model('AnalyticsConversation', analyticsSchema, 'analytics_conversations');
+
 // --- EMBEDDING AND CHUNKING LOGIC (from server.js, keep as is for Render) ---
 // Dummy chatbot response function (keeping original for TCP compatibility)
 async function generateChatbotResponse(text, userId) {
@@ -667,6 +678,16 @@ app.post('/api/ask', async (req, res) => {
       finalAnswer = await callWebSearchAgent(question, threadId, language);
       source = 'web-search-agent';
     }
+
+    // Save to analytics collection
+    await AnalyticsConversation.create({
+      question,
+      answer: finalAnswer,
+      language,
+      source,
+      threadId: threadId || 'auto-generated',
+      timestamp: new Date()
+    });
 
     return res.json({
       question,
