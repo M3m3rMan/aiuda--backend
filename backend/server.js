@@ -15,6 +15,7 @@ const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
 import { franc } from 'franc';
 import bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
 
 // 🆕 LangChain imports for web search agent
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
@@ -932,5 +933,41 @@ app.post('/api/login', async (req, res) => {
     res.json({ message: '¡Inicio de sesión exitoso!', user: { username: user.username, email: user.email } });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor: ' + err.message });
+  }
+});
+
+// New Google login endpoint
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+app.post('/api/google-login', async (req, res) => {
+  const { idToken } = req.body;
+  try {
+    // Verify token with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    // Check if user exists
+    let user = await User.findOne({ email });
+    if (!user) {
+      // Create new user
+      user = new User({
+        username: name,
+        email,
+        password: Math.random().toString(36), // random, not used
+      });
+      await user.save();
+    }
+
+    // Respond with user info (including _id)
+    res.json({
+      message: 'Google login successful!',
+      user: { id: user._id, username: user.username, email: user.email }
+    });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid Google token', details: err.message });
   }
 });
