@@ -25,6 +25,7 @@
     "express": "^5.1.0",
     "form-data": "^4.0.2",
     "franc": "^6.2.0",
+    "google-auth-library": "^9.15.1",
     "mongodb": "^6.16.0",
     "mongoose": "^8.15.0",
     "openai": "^4.102.0",
