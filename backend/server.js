@@ -240,6 +240,7 @@ const messageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 const conversationSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Add this line
   title: String,
   messages: [messageSchema],
   createdAt: { type: Date, default: Date.now }
@@ -280,6 +281,7 @@ const User = mongoose.model('User', userSchema);
 
 // Analytics schema for logging every /api/ask Q&A
 const analyticsSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Add this line
   question: String,
   answer: String,
   language: String,
@@ -487,7 +489,8 @@ async function initializeDatabase() {
 // Conversation endpoints
 app.post('/api/conversations', async (req, res) => {
   try {
-    const conversation = new Conversation({ title: req.body.title || 'Untitled', messages: [] });
+    const { title, userId } = req.body;
+    const conversation = new Conversation({ user: userId, title: title || 'Untitled', messages: [] });
     await conversation.save();
     res.status(201).json(conversation);
   } catch (err) {
@@ -495,9 +498,11 @@ app.post('/api/conversations', async (req, res) => {
   }
 });
 
+// Example for conversations
 app.get('/api/conversations', async (req, res) => {
+  const { userId } = req.query; // Or from auth/session
   try {
-    const conversations = await Conversation.find().sort({ createdAt: -1 });
+    const conversations = await Conversation.find({ user: userId }).sort({ createdAt: -1 });
     res.json(conversations);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -576,7 +581,7 @@ app.post('/api/web-search', async (req, res) => {
 
 // Updated main RAG endpoint with automatic web search fallback
 app.post('/api/ask', async (req, res) => {
-  const { question, threadId } = req.body;
+  const { question, threadId, userId } = req.body;
   if (!question) {
     return res.status(400).json({ error: 'Question is required.' });
   }
@@ -681,6 +686,7 @@ app.post('/api/ask', async (req, res) => {
 
     // Save to analytics collection
     await AnalyticsConversation.create({
+      user: userId, // Save user reference
       question,
       answer: finalAnswer,
       language,
