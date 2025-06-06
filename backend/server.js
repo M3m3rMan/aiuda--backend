@@ -908,7 +908,10 @@ app.post('/api/signup', async (req, res) => {
     }
     const user = new User({ username, email, password });
     await user.save();
-    res.status(201).json({ message: 'Usuario creado exitosamente.' });
+    res.status(201).json({
+      message: 'Usuario creado exitosamente.',
+      user: { id: user._id, username: user.username, email: user.email }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor: ' + err.message });
   }
@@ -930,7 +933,10 @@ app.post('/api/login', async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ error: 'Credenciales inválidas.' });
     }
-    res.json({ message: '¡Inicio de sesión exitoso!', user: { username: user.username, email: user.email } });
+    res.json({
+      message: '¡Inicio de sesión exitoso!',
+      user: { id: user._id, username: user.username, email: user.email }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor: ' + err.message });
   }
